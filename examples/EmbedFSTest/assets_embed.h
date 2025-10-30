@@ -3,7 +3,7 @@
 // Index:
 // - assets/directory/1.txt -> assets_directory_1_txt / assets_directory_1_txt_len
 // - assets/directory/2.txt -> assets_directory_2_txt / assets_directory_2_txt_len
-// - assets/test.txt -> assets_test_txt / assets_test_txt_len
+// - assets/hello.txt -> assets_hello_txt / assets_hello_txt_len
 
 #pragma once
 #include <cstddef>
@@ -26,25 +26,25 @@ alignas(4) const uint8_t assets_directory_2_txt[] PROGMEM = {
 };
 const size_t assets_directory_2_txt_len = 1;
 
-// assets/test.txt
-alignas(4) const uint8_t assets_test_txt[] PROGMEM = {
-  0x74, 0x65, 0x73, 0x74
+// assets/hello.txt
+alignas(4) const uint8_t assets_hello_txt[] PROGMEM = {
+  0x68, 0x65, 0x6C, 0x6C, 0x6F
 };
-const size_t assets_test_txt_len = 4;
+const size_t assets_hello_txt_len = 5;
 
 constexpr size_t assets_file_count = 3;
 const char* const assets_file_names[assets_file_count] = {
   "/directory/1.txt",
   "/directory/2.txt",
-  "/test.txt"
+  "/hello.txt"
 };
 const uint8_t* const assets_file_data[assets_file_count] = {
   assets_directory_1_txt,
   assets_directory_2_txt,
-  assets_test_txt
+  assets_hello_txt
 };
 const size_t assets_file_sizes[assets_file_count] = {
   assets_directory_1_txt_len,
   assets_directory_2_txt_len,
-  assets_test_txt_len
+  assets_hello_txt_len
 };

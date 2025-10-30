@@ -10,3 +10,4 @@ arduino_secrets.h
 *.bat
 *.txt
 sketch.yaml
+temp
