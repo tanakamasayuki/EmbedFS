@@ -66,7 +66,7 @@ namespace fs
 
         void end();
 
-        // FS-like helpers (open returns empty File; use openEmbedded() to get EmbedFSFile)
+        // FS-like helpers
         bool exists(const char *path) const;
         File open(const char *path, const char *mode = "r") const;
 

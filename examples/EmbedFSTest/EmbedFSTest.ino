@@ -327,6 +327,7 @@ void setup()
 
 void loop()
 {
+    Serial.println("loop");
     File root = EmbedFS.open("/"); // ルートを表す File (ディレクトリ)
     if (root && root.isDirectory())
     {
