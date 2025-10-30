@@ -28,9 +28,10 @@ const size_t assets_directory_2_txt_len = 1;
 
 // assets/hello.txt
 alignas(4) const uint8_t assets_hello_txt[] PROGMEM = {
-  0x68, 0x65, 0x6C, 0x6C, 0x6F
+  0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x65,
+  0x6E, 0x64, 0x0A
 };
-const size_t assets_hello_txt_len = 5;
+const size_t assets_hello_txt_len = 15;
 
 constexpr size_t assets_file_count = 3;
 const char* const assets_file_names[assets_file_count] = {

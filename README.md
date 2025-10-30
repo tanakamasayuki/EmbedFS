@@ -98,7 +98,7 @@ the following minimal contract:
 
 - begin(const char* const file_names[], const uint8_t* const file_data[], const size_t file_sizes[], size_t file_count) -> bool
   - Initialize the library with the generated arrays (file names, data pointers, sizes and count).
-- // Alternative: keep a LittleFS-like class and add an overloaded begin that accepts embedded arrays.
+- // Alternative: keep a FS-like class and add an overloaded begin that accepts embedded arrays.
 - open(const char* path, const char* mode) -> File
   - Open a file in read mode ("r"). The returned object should support `read()`,
     `available()`, `close()` and `size()` similar to Arduino `File`.
@@ -113,7 +113,7 @@ Error modes:
 
 Design note: keep the API read-only. If you need write support, use SD or LittleFS.
 
-Class shape recommendation (LittleFS-like)
+Class shape recommendation (FS-like)
 
 To be familiar to users, implement EmbedFS as a class with a global instance similar
 to the LittleFS example. Suggestion:

@@ -153,7 +153,7 @@ void deleteFile(fs::FS &fs, const char *path)
     }
 }
 
-// SPIFFS-like write and delete file, better use #define CONFIG_EmbedFS_SPIFFS_COMPAT 1
+// FS-like write and delete file, better use #define CONFIG_EmbedFS_SPIFFS_COMPAT 1
 
 void writeFile2(fs::FS &fs, const char *path, const char *message)
 {
@@ -301,7 +301,7 @@ void setup()
         Serial.println("EmbedFS Mount Failed");
         return;
     }
-    Serial.println("SPIFFS-like write file to new path and delete it w/folders");
+    Serial.println("FS-like write file to new path and delete it w/folders");
     writeFile2(EmbedFS, "/new1/new2/new3/hello3.txt", "Hello3");
     listDir(EmbedFS, "/", 3);
     deleteFile2(EmbedFS, "/new1/new2/new3/hello3.txt");
@@ -325,4 +325,49 @@ void setup()
     Serial.println("Test complete");
 }
 
-void loop() {}
+void loop()
+{
+    File root = EmbedFS.open("/"); // ルートを表す File (ディレクトリ)
+    if (root && root.isDirectory())
+    {
+        Serial.println("root:");
+        File entry;
+        while ((entry = root.openNextFile()))
+        {
+            Serial.print("  ");
+            Serial.print(entry.name()); // 表示パス（先頭 '/' あり）
+            if (entry.isDirectory())
+                Serial.println("/");
+            else
+            {
+                Serial.print(" size=");
+                Serial.println(entry.size());
+            }
+            entry.close();
+        }
+        root.close();
+    }
+
+    File dir = EmbedFS.open("/directory");
+    if (dir && dir.isDirectory())
+    {
+        Serial.println("directory:");
+        File entry;
+        while ((entry = dir.openNextFile()))
+        {
+            Serial.print("  ");
+            Serial.print(entry.name());
+            if (entry.isDirectory())
+                Serial.println("/");
+            else
+            {
+                Serial.print(" size=");
+                Serial.println(entry.size());
+            }
+            entry.close();
+        }
+        dir.close();
+    }
+
+    delay(10000); // 10秒待つ
+}
