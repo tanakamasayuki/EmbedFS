@@ -19,28 +19,7 @@
 namespace fs
 {
 
-    class EmbedFSFile
-    {
-    public:
-        EmbedFSFile();
-        EmbedFSFile(const uint8_t *dataPtr, size_t dataSize);
-        ~EmbedFSFile();
-
-        // Minimal File-like API for embedded reads
-        operator bool() const;
-        size_t size() const;
-        size_t position() const;
-        bool seek(size_t pos);
-        int available() const;
-        int read();
-        size_t read(uint8_t *buffer, size_t len);
-        void close();
-
-    private:
-        const uint8_t *dataPtr_;
-        size_t dataSize_;
-        size_t pos_;
-    };
+    // (Removed) Lightweight embedded-file reader type was removed from the public API.
 
     // EmbedFSFS: LittleFS-like class in fs namespace. Read-only filesystem backed by
     // embedded arrays (assets_file_names, assets_file_data, assets_file_sizes, assets_file_count).
@@ -70,8 +49,7 @@ namespace fs
         bool exists(const char *path) const;
         File open(const char *path, const char *mode = "r") const;
 
-        // Direct embedded file reader
-        EmbedFSFile openEmbedded(const char *path) const;
+        // (removed) Direct embedded file reader: openEmbedded() was removed from the API
 
     private:
         const char *const *fileNames_;

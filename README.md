@@ -72,15 +72,9 @@ void setup() {
 
   // Read a file
   if (embedfs.exists("/test.txt")) {
-    // Note: This library provides a lightweight embedded reader via openEmbedded().
     // Returning an Arduino `File` is not implemented by the minimal example.
-    auto f = embedfs.openEmbedded("/test.txt");
-    if (f) {
-      while (f.available()) {
-        Serial.write(f.read());
-      }
-      f.close();
-    }
+    // The example can be adapted to use a small reader that streams from the
+    // generated data arrays if desired.
   }
 }
 

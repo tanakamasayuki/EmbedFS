@@ -1,6 +1,6 @@
 /*
   EmbedFS.cpp
-  Minimal implementation for EmbedFS.h
+  Clean implementation for EmbedFS.h without EmbedFSFile helper.
 */
 
 #include "EmbedFS.h"
@@ -44,12 +44,7 @@ public:
     }
 
     // write is unsupported for read-only embedded FS
-    size_t write(const uint8_t *buf, size_t size) override
-    {
-        (void)buf;
-        (void)size;
-        return 0;
-    }
+    size_t write(const uint8_t * /*buf*/, size_t /*size*/) override { return 0; }
 
     size_t read(uint8_t *buf, size_t size) override
     {
@@ -100,19 +95,10 @@ public:
 
     boolean isDirectory(void) override { return false; }
 
-    FileImplPtr openNextFile(const char *mode) override
-    {
-        (void)mode;
-        return FileImplPtr();
-    }
+    FileImplPtr openNextFile(const char * /*mode*/) override { return FileImplPtr(); }
     boolean seekDir(long) override { return false; }
     String getNextFileName(void) override { return String(); }
-    String getNextFileName(bool *isDir) override
-    {
-        if (isDir)
-            *isDir = false;
-        return String();
-    }
+    String getNextFileName(bool * /*isDir*/) override { return String(); }
     void rewindDirectory(void) override {}
 
     operator bool() override { return _data != nullptr; }
@@ -133,51 +119,76 @@ public:
         : names_(file_names), data_(file_data), sizes_(file_sizes), count_(file_count) {}
     virtual ~EmbedFSImpl() {}
 
-    FileImplPtr open(const char *path, const char *mode, const bool create) override
+    FileImplPtr open(const char *path, const char * /*mode*/, const bool /*create*/) override
     {
-        (void)mode;
-        (void)create;
+        if (!path)
+            return FileImplPtr();
+        // normalize path (accept with or without leading '/')
+        std::string p(path);
+        if (!p.empty() && p.front() == '/')
+            p.erase(0, 1);
+        std::string display = std::string("/") + p;
+
         for (size_t i = 0; i < count_; ++i)
         {
-            if (names_[i] && strcmp(names_[i], path) == 0)
-            {
-                return std::make_shared<EmbeddedFileImpl>(path, data_[i], sizes_[i]);
-            }
+            if (!names_[i])
+                continue;
+            std::string nj(names_[i]);
+            if (!nj.empty() && nj.front() == '/')
+                nj.erase(0, 1);
+            if (nj == p)
+                return std::make_shared<EmbeddedFileImpl>(display.c_str(), data_[i], sizes_[i]);
+        }
+        // treat as directory if any entry has this prefix
+        std::string prefix = p.empty() ? std::string() : (p + '/');
+        for (size_t i = 0; i < count_; ++i)
+        {
+            if (!names_[i])
+                continue;
+            std::string fn(names_[i]);
+            if (!fn.empty() && fn.front() == '/')
+                fn.erase(0, 1);
+            if (prefix.empty() || (fn.size() > prefix.size() && fn.compare(0, prefix.size(), prefix) == 0))
+                return std::make_shared<EmbeddedFileImpl>(display.c_str(), nullptr, 0); // directory marker
         }
         return FileImplPtr();
     }
 
     bool exists(const char *path) override
     {
+        if (!path)
+            return false;
+        std::string p(path);
+        if (!p.empty() && p.front() == '/')
+            p.erase(0, 1);
         for (size_t i = 0; i < count_; ++i)
         {
-            if (names_[i] && strcmp(names_[i], path) == 0)
+            if (!names_[i])
+                continue;
+            std::string nj(names_[i]);
+            if (!nj.empty() && nj.front() == '/')
+                nj.erase(0, 1);
+            if (nj == p)
+                return true;
+        }
+        std::string prefix = p.empty() ? std::string() : (p + '/');
+        for (size_t i = 0; i < count_; ++i)
+        {
+            if (!names_[i])
+                continue;
+            std::string fn(names_[i]);
+            if (!fn.empty() && fn.front() == '/')
+                fn.erase(0, 1);
+            if (prefix.empty() || (fn.size() > prefix.size() && fn.compare(0, prefix.size(), prefix) == 0))
                 return true;
         }
         return false;
     }
 
-    bool rename(const char *pathFrom, const char *pathTo) override
-    {
-        (void)pathFrom;
-        (void)pathTo;
-        return false;
-    }
-    bool remove(const char *path) override
-    {
-        (void)path;
-        return false;
-    }
-    bool mkdir(const char *path) override
-    {
-        (void)path;
-        return false;
-    }
-    bool rmdir(const char *path) override
-    {
-        (void)path;
-        return false;
-    }
+    bool rename(const char * /*pathFrom*/, const char * /*pathTo*/) override { return false; }
+    bool remove(const char * /*path*/) override { return false; }
+    bool mkdir(const char * /*path*/) override { return false; }
+    bool rmdir(const char * /*path*/) override { return false; }
 
 private:
     const char *const *names_;
@@ -185,70 +196,6 @@ private:
     const size_t *sizes_;
     size_t count_;
 };
-
-// ---------------- EmbedFSFile (compat layer) ----------------
-EmbedFSFile::EmbedFSFile() : dataPtr_(nullptr), dataSize_(0), pos_(0) {}
-EmbedFSFile::EmbedFSFile(const uint8_t *dataPtr, size_t dataSize) : dataPtr_(dataPtr), dataSize_(dataSize), pos_(0) {}
-EmbedFSFile::~EmbedFSFile() {}
-EmbedFSFile::operator bool() const { return dataPtr_ != nullptr; }
-
-size_t EmbedFSFile::size() const { return dataSize_; }
-size_t EmbedFSFile::position() const { return pos_; }
-
-bool EmbedFSFile::seek(size_t pos)
-{
-    if (!dataPtr_)
-        return false;
-    if (pos > dataSize_)
-        return false;
-    pos_ = pos;
-    return true;
-}
-int EmbedFSFile::available() const
-{
-    if (!dataPtr_)
-        return 0;
-    return (int)(dataSize_ - pos_);
-}
-
-int EmbedFSFile::read()
-{
-    if (!dataPtr_ || pos_ >= dataSize_)
-        return -1;
-    uint8_t b;
-#if defined(__AVR__)
-    b = pgm_read_byte(dataPtr_ + pos_);
-#else
-    b = dataPtr_[pos_];
-#endif
-    pos_++;
-    return (int)b;
-}
-
-size_t EmbedFSFile::read(uint8_t *buffer, size_t len)
-{
-    if (!dataPtr_ || pos_ >= dataSize_)
-        return 0;
-    size_t remaining = dataSize_ - pos_;
-    size_t toRead = (len < remaining) ? len : remaining;
-    for (size_t i = 0; i < toRead; ++i)
-    {
-#if defined(__AVR__)
-        buffer[i] = pgm_read_byte(dataPtr_ + pos_ + i);
-#else
-        buffer[i] = dataPtr_[pos_ + i];
-#endif
-    }
-    pos_ += toRead;
-    return toRead;
-}
-
-void EmbedFSFile::close()
-{
-    dataPtr_ = nullptr;
-    dataSize_ = 0;
-    pos_ = 0;
-}
 
 // ---------------- EmbedFSFS (public API) ----------------
 EmbedFSFS::EmbedFSFS() : FS(FSImplPtr(nullptr)), fileNames_(nullptr), fileData_(nullptr), fileSizes_(nullptr), fileCount_(0) {}
@@ -288,20 +235,6 @@ File EmbedFSFS::open(const char *path, const char *mode) const
     if (!_impl)
         return File();
     return File(_impl->open(path, mode, false));
-}
-EmbedFSFile EmbedFSFS::openEmbedded(const char *path) const
-{
-    if (!fileNames_)
-        return EmbedFSFile();
-    for (size_t i = 0; i < fileCount_; ++i)
-    {
-        const char *p = fileNames_[i];
-        if (!p)
-            continue;
-        if (strcmp(p, path) == 0)
-            return EmbedFSFile(fileData_[i], fileSizes_[i]);
-    }
-    return EmbedFSFile();
 }
 
 size_t EmbedFSFS::totalBytes()

@@ -69,14 +69,8 @@ void setup() {
   // ファイル読み込み
   if (embedfs.exists("/test.txt")) {
     // 注: 最小実装では Arduino の File を返す open() は実装していません。
-    // 埋め込みデータを読み取るために openEmbedded() を使います。
-    auto f = embedfs.openEmbedded("/test.txt");
-    if (f) {
-      while (f.available()) {
-        Serial.write(f.read());
-      }
-      f.close();
-    }
+    // 代わりに生成されたデータ配列からストリームする小さなリーダを用意して
+    // 読み出すことができます。
   }
 }
 
