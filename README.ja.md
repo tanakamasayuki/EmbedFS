@@ -2,13 +2,14 @@
 
 EmbedFS は Arduino / ESP32 向けの小さな読み取り専用の仮想ファイルシステムです。
 プログラムメモリ（フラッシュ）に `const` データとしてファイル（アセット）を埋め込み、
-SD、SPIFFS、LittleFS のような一般的な Arduino の FS ライブラリと互換性のある
+SD、SPIFFS、LittleFS のような一般的な Arduino 用 FS ライブラリと互換性のある
 ファイルシステム風の API でアクセスできるようにします。
 
 ## 主な特徴
 
 - フラッシュ上の配列（const データ）として保持される読み取り専用の仮想 FS。
-- 可能なかぎり Arduino の `File`/`FS` スタイルの操作（open / read / exists / list）と互換。
+- Arduino の `File`/`FS` スタイルの操作（open / read / exists / list / rewindDirectory 等）と互換。
+- ファイルだけでなくディレクトリも開けるため、階層構造の列挙が可能。
 - ESP32 等の Arduino 互換ボード向けに設計。
 - Arduino CLI Wrapper が生成する `assets_embed.h` や、ディレクトリを C ヘッダに
   変換する他のツールで生成したアセットで動作。
@@ -25,7 +26,7 @@ SD、SPIFFS、LittleFS のような一般的な Arduino の FS ライブラリ�
 注意: EmbedFS は読み取り専用です。ランタイムでのファイル更新や永続化が必要な場合は
 SD や LittleFS を使用してください。
 
-このリポジトリの `examples/EmbedFSTest/` にあるスケッチは次のように初期化します:
+このリポジトリの `examples/BasicTest/` にあるスケッチは次のように初期化します:
 
 ```cpp
 EmbedFS.begin(assets_file_names, assets_file_data, assets_file_sizes, assets_file_count);
@@ -43,99 +44,106 @@ EmbedFS.begin(assets_file_names, assets_file_data, assets_file_sizes, assets_fil
 
 ## 例（Arduino / ESP32）
 
-以下は代表的な使い方の例です。生成されたヘッダ（`assets_embed.h`）は
-`assets` や `assets_count` のようなシンボルを公開していることを想定しています。
+以下は `examples/BasicTest/BasicTest.ino` をベースにした代表的な使い方の例です。
+生成されたヘッダ（`assets_embed.h`）は前述の配列シンボルを公開していることを想定しています。
 
 ```cpp
-#include <Arduino.h>
-#include "EmbedFS.h"     // EmbedFS ライブラリのヘッダ
-#include "assets_embed.h" // 生成された埋め込みアセットのヘッダ
-
-// EmbedFS インスタンスを作成
-EmbedFS embedfs;
+#include <EmbedFS.h>
+#include "assets_embed.h"
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) {}
+  delay(1000);
 
-  // 生成されたアセットインデックスでライブラリを初期化します。
-  // 実際の呼び出しは生成ヘッダの形式に依存します。
-  // 例: embedfs.begin(assets, assets_count);
-  if (!embedfs.begin(assets, assets_count)) {
-    Serial.println("EmbedFS init failed");
+  if (!EmbedFS.begin(assets_file_names, assets_file_data, assets_file_sizes, assets_file_count)) {
+    Serial.println("EmbedFS mount failed");
     return;
   }
 
-  // ファイル読み込み
-  if (embedfs.exists("/test.txt")) {
-    // 注: 最小実装では Arduino の File を返す open() は実装していません。
-    // 代わりに生成されたデータ配列からストリームする小さなリーダを用意して
-    // 読み出すことができます。
+  Serial.println("Embedded files:");
+  for (size_t i = 0; i < assets_file_count; ++i) {
+    File file = EmbedFS.open(assets_file_names[i], "r");
+    if (!file) {
+      continue;
+    }
+    Serial.printf("- path: %s size: %u bytes\n", file.path(), static_cast<unsigned>(file.size()));
+    while (file.available()) {
+      Serial.write(file.read());
+    }
+    Serial.println();
+    file.close();
+  }
+
+  Serial.println("Directory listing of /directory:");
+  File dir = EmbedFS.open("/directory");
+  if (dir && dir.isDirectory()) {
+    dir.rewindDirectory();
+    while (true) {
+      File child = dir.openNextFile();
+      if (!child) {
+        break;
+      }
+      Serial.printf("- %s (%s)\n", child.path(), child.isDirectory() ? "dir" : "file");
+      child.close();
+    }
+    dir.close();
   }
 }
 
 void loop() {
-  // 何もしない
+  delay(10000);
 }
 ```
 
-コード内のコメントは英語（ライブラリ内コメントと一致）にしていますが、
-README の本文は日本語で説明しています。
+BasicTest では 10 秒ごとに上記処理を繰り返し、埋め込んだファイルの中身と
+`/directory` 配下の内容をシリアルモニタに出力します。
 
 ## 推奨 API（コントラクト）
 
 EmbedFS を Arduino プロジェクトで扱いやすくするため、最小限のコントラクトは
 以下の通りです。
 
-- begin(const char* const file_names[], const uint8_t* const file_data[], const size_t file_sizes[], size_t file_count) -> bool
+- `bool begin(const char* const file_names[], const uint8_t* const file_data[], const size_t file_sizes[], size_t file_count)`
   - 生成ヘッダの配列（ファイル名、データポインタ、サイズ、件数）で初期化します。
-- // 代替案: LittleFS 風のクラスに対して追加の begin オーバーロードで埋め込み配列を受け取れるようにする。
-- open(const char* path, const char* mode) -> File
-  - 読み取りモード（"r"）でファイルを開きます。返却されたオブジェクトは
-    `read()`、`available()`、`close()`、`size()` 等をサポートすることを想定します。
-- exists(const char* path) -> bool
-  - 指定パスの埋め込みファイルが存在するかを返します。
-- list(const char* dir, FSListCallback cb)
-  - オプション: ディレクトリ内のファイルを列挙し、コールバックにメタデータを渡します。
+- `File open(const char* path, const char* mode = "r")`
+  - 読み取りモード（`"r"`）でファイルを開きます。返却された `File` は `read()`、`available()`、`size()`、
+    `path()`、`name()` をサポートします。ディレクトリパスを渡した場合は `isDirectory()` が true の
+    ディレクトリエントリを返し、`openNextFile()` や `rewindDirectory()` で走査できます。
+- `bool exists(const char* path)`
+  - 指定パスの埋め込みファイルまたはディレクトリが存在するかを返します。
+- `size_t totalBytes()` / `size_t usedBytes()`
+  - 埋め込まれている合計サイズを返します（読み取り専用のため、両者は同じ値です）。
 
 エラー動作:
-- begin() は無効なポインタや件数0のときに false を返すべきです。
-- open() はファイルが見つからない、もしくはサポート外のモードの場合に
-  無効な `File` を返すべきです。
+- `begin()` は無効なポインタや件数 0 のときに `false` を返します。
+- `open()` はファイル/ディレクトリが見つからない、もしくはサポート外のモードの場合に
+  無効な `File` を返します。
 
 設計上の注意: 読み取り専用 API に留め、書き込みが必要な場合は SD や LittleFS を使ってください。
 
 クラス構造の推奨（LittleFS 風）
 
-ユーザに馴染み深くするため、LittleFS のようなクラス構造を持ちグローバルインスタンス `EmbedFS` を提供するのが
-分かりやすいです。例:
+ユーザに馴染み深くするため、LittleFS のようなクラス構造を持ちグローバルインスタンス `EmbedFS` を提供しています。
+実装は以下のような構成です。
 
 ```cpp
-class EmbedFSClass : public FS {
+class EmbedFSFS : public FS {
 public:
-  EmbedFSClass();
-  ~EmbedFSClass();
-
-  // 例: examples/EmbedFSTest が使う埋め込み配列で初期化する begin
   bool begin(const char* const file_names[], const uint8_t* const file_data[], const size_t file_sizes[], size_t file_count);
-
-  // 互換性のための LittleFS 風 begin のオーバーロード
   bool begin(bool formatOnFail = false, const char* basePath = "/embedfs", uint8_t maxOpenFiles = 10, const char* partitionLabel = nullptr);
-
-  // FS ライクなヘルパー
-  bool exists(const char* path);
-  File open(const char* path, const char* mode);
+  bool exists(const char* path) const;
+  File open(const char* path, const char* mode = "r") const;
   void end();
   size_t totalBytes();
   size_t usedBytes();
 };
 
-extern EmbedFSClass EmbedFS;
+extern EmbedFSFS EmbedFS;
 ```
 
-examples/EmbedFSTest は `EmbedFS.begin(assets_file_names, assets_file_data, assets_file_sizes, assets_file_count);` を呼び出します。
-実装では PROGMEM に格納されたデータの扱いに注意し、可能ならファイル全体を RAM にコピーせずフラッシュから直接ストリームする
-設計にしてください。
+`examples/BasicTest/` では `EmbedFS.begin(assets_file_names, assets_file_data, assets_file_sizes, assets_file_count);` を呼び出し、
+返ってきた `File` でテキストをストリームしながら読み出し、さらに `/directory` を開いて
+`openNextFile()` で子要素を列挙する例を示しています。
 
 ## `assets_embed.h` の生成方法
 
@@ -172,9 +180,9 @@ print('\n'.join(out))
 
 ## examples フォルダ
 
-このリポジトリの `examples/EmbedFSTest/` を参照してください。Arduino の最小スケッチと、
+このリポジトリの `examples/BasicTest/` を参照してください。Arduino のスケッチに加え、
 Arduino CLI Wrapper で生成した `assets_embed.h` のサンプルを含んでおり、テスト用の期待される
-ヘッダ形式が分かります。
+ヘッダ形式とディレクトリ列挙の流れが確認できます。
 
 ## 制限と注意点
 
