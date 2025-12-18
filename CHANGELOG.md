@@ -1,6 +1,8 @@
 # Changelog / 変更履歴
 
 ## Unreleased
+- (EN) Fixed missing assets folder
+- (JA) assetsフォルダが追加されていなかったのを修正
 
 ## 1.0.1
 - (EN) Release workflow now rebuilds the release branch and tags it so rewritten sketch.yaml files are part of the tagged release contents
