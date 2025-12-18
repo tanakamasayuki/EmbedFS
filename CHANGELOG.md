@@ -1,6 +1,8 @@
 # Changelog / 変更履歴
 
 ## Unreleased
+
+## 1.0.2
 - (EN) Fixed missing assets folder
 - (JA) assetsフォルダが追加されていなかったのを修正
 
