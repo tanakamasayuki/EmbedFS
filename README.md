@@ -6,6 +6,8 @@ access them through a filesystem-like API compatible with common Arduino FS libr
 (SD, SPIFFS, LittleFS). Use this when you want to ship static assets with your firmware
 and avoid runtime copying or external storage.
 
+Start with the [example workflow](docs/GUIDE_EXAMPLES.md) and [individual example READMEs](examples/README.md) for setup, API sequence, verification and adaptation notes.
+
 ## Key features
 
 - Read-only virtual filesystem implemented as arrays in flash (const data).

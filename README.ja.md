@@ -5,6 +5,8 @@ EmbedFS は Arduino / ESP32 向けの小さな読み取り専用の仮想ファ�
 SD、SPIFFS、LittleFS のような一般的な Arduino 用 FS ライブラリと互換性のある
 ファイルシステム風の API でアクセスできるようにします。
 
+初めて使う場合は[サンプル入門ガイド](docs/GUIDE_EXAMPLES.ja.md)と[各例の日英README](examples/README.ja.md)を参照してください。準備、APIの流れ、確認方法、組み込み時の注意を説明しています。
+
 ## 主な特徴
 
 - フラッシュ上の配列（const データ）として保持される読み取り専用の仮想 FS。

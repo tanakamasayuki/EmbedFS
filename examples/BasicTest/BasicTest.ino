@@ -1,3 +1,5 @@
+// en: Read embedded files and enumerate directories
+// ja: 埋め込んだファイルの読み取りと列挙を行う
 #include <EmbedFS.h>
 #include "assets_embed.h"
 
@@ -6,6 +8,8 @@ void setup()
     Serial.begin(115200);
     delay(1000);
 
+    // en: Initialize this component after its prerequisites; inspect the returned status where provided.
+    // ja: 前提となる機器を準備してから初期化し、結果を返すAPIでは成否を確認します。
     if (!EmbedFS.begin(assets_file_names, assets_file_data, assets_file_sizes, assets_file_count))
     {
         Serial.println("EmbedFS Mount Failed");
